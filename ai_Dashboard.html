@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Cyber Command - Independent Axis Control</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root { --neon: #00f2fe; --tech-bg: #020b1a; --border: rgba(0, 242, 254, 0.4); }
+        body {
+            background-color: var(--tech-bg); color: var(--neon); font-family: 'Rajdhani', sans-serif;
+            margin: 0; padding: 10px; min-height: 100vh;
+            background-image: linear-gradient(rgba(0,242,254,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,242,254,0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        #dashboard { display: none; flex-direction: column; gap: 8px; }
+        .top-header { border: 1px solid var(--neon); display: flex; justify-content: space-between; align-items: center; padding: 5px 20px; background: rgba(0,242,254,0.1); }
+        .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .main-layout { display: grid; grid-template-columns: 330px 1fr 330px; gap: 10px; }
+        .column { display: flex; flex-direction: column; gap: 8px; }
+        .cyber-card { background: rgba(10, 25, 47, 0.9); border: 1px solid var(--border); padding: 10px; position: relative; }
+        .dynamic-title { font-size: 10px; color: #fff; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 8px; font-weight: bold; }
+        .kpi-val { font-family: 'Orbitron'; font-size: 22px; color: #fff; text-shadow: 0 0 8px var(--neon); text-align: center; margin: 5px 0; }
+        
+        /* Dropdown Styling */
+        .controls { display: flex; justify-content: space-between; margin-bottom: 8px; gap: 5px; }
+        .controls div { display: flex; align-items: center; gap: 3px; font-size: 9px; color: #fff; }
+        select { background: #011627; color: var(--neon); border: 1px solid var(--border); font-size: 9px; padding: 1px; cursor: pointer; max-width: 80px; }
+
+        .center-visual { height: 200px; border: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(circle, rgba(0,242,254,0.1) 0%, transparent 80%); }
+        #upload-screen { height: 90vh; display: flex; align-items: center; justify-content: center; }
+        .drop-zone { border: 2px dashed var(--neon); padding: 50px; text-align: center; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="upload-screen">
+        <div class="drop-zone" onclick="document.getElementById('fileIn').click()">
+            <i class="fas fa-upload" style="font-size: 40px; margin-bottom: 15px;"></i>
+            <h2 style="font-family:'Orbitron'">BOOT INDEPENDENT SYSTEM</h2>
+            <p>Upload Excel/CSV to start</p>
+            <input type="file" id="fileIn" hidden accept=".xlsx, .xls, .csv">
+        </div>
+    </div>
+
+    <div id="dashboard">
+        <header class="top-header">
+            <h2 style="font-family:'Orbitron'; margin:0; font-size: 14px;">MULTI-AXIS <span style="color:#fff">COMMAND CENTER</span></h2>
+            <div>
+                <span style="font-size: 10px;">GLOBAL SLICER:</span>
+                <select id="sCol" onchange="loadVals()"></select>
+                <select id="sVal" onchange="runFilters()"></select>
+            </div>
+        </header>
+
+        <div class="kpi-row">
+            <div class="cyber-card"> <select id="k1" onchange="upKPI()"></select><div id="v1" class="kpi-val">0</div> </div>
+            <div class="cyber-card"> <select id="k2" onchange="upKPI()"></select><div id="v2" class="kpi-val">0</div> </div>
+            <div class="cyber-card"> <select id="k3" onchange="upKPI()"></select><div id="v3" class="kpi-val">0</div> </div>
+            <div class="cyber-card"> <select id="k4" onchange="upKPI()"></select><div id="v4" class="kpi-val">0</div> </div>
+        </div>
+
+        <div class="main-layout">
+            <div class="column">
+                <div class="cyber-card">
+                    <span id="h1" class="dynamic-title">CHART 1</span>
+                    <div class="controls">
+                        <div>X: <select id="c1X" onchange="drawOne(1)"></select></div>
+                        <div>Y: <select id="c1Y" onchange="drawOne(1)"></select></div>
+                    </div>
+                    <div style="height:150px;"><canvas id="chart1"></canvas></div>
+                </div>
+                <div class="cyber-card">
+                    <span id="h2" class="dynamic-title">CHART 2</span>
+                    <div class="controls">
+                        <div>X: <select id="c2X" onchange="drawOne(2)"></select></div>
+                        <div>Y: <select id="c2Y" onchange="drawOne(2)"></select></div>
+                    </div>
+                    <div style="height:150px;"><canvas id="chart2"></canvas></div>
+                </div>
+            </div>
+
+            <div class="column">
+                <div class="center-visual">
+                    <i class="fas fa-atom" style="font-size:40px; margin-bottom:10px;"></i>
+                    <div style="display:flex; gap: 20px;">
+                        <div><div id="v5" class="kpi-val">0</div><select id="k5" onchange="upKPI()"></select></div>
+                        <div><div id="v6" class="kpi-val">0</div><select id="k6" onchange="upKPI()"></select></div>
+                    </div>
+                </div>
+                <div class="cyber-card">
+                    <span id="h3" class="dynamic-title">CHART 3</span>
+                    <div class="controls">
+                        <div>X: <select id="c3X" onchange="drawOne(3)"></select></div>
+                        <div>Y: <select id="c3Y" onchange="drawOne(3)"></select></div>
+                    </div>
+                    <div style="height:140px;"><canvas id="chart3"></canvas></div>
+                </div>
+            </div>
+
+            <div class="column">
+                <div class="cyber-card">
+                    <span id="h4" class="dynamic-title">CHART 4</span>
+                    <div class="controls">
+                        <div>X: <select id="c4X" onchange="drawOne(4)"></select></div>
+                        <div>Y: <select id="c4Y" onchange="drawOne(4)"></select></div>
+                    </div>
+                    <div style="height:170px;"><canvas id="chart4"></canvas></div>
+                </div>
+                <div class="cyber-card">
+                    <span id="h5" class="dynamic-title">CHART 5</span>
+                    <div class="controls">
+                        <div>X: <select id="c5X" onchange="drawOne(5)"></select></div>
+                        <div>Y: <select id="c5Y" onchange="drawOne(5)"></select></div>
+                    </div>
+                    <div style="height:170px;"><canvas id="chart5"></canvas></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let raw = [], filtered = [], cols = [], cInst = {};
+
+        document.getElementById('fileIn').addEventListener('change', function(e) {
+            const f = e.target.files[0];
+            const r = new FileReader();
+            r.onload = (evt) => {
+                const data = XLSX.utils.sheet_to_json(XLSX.read(evt.target.result, {type:'binary'}).Sheets[XLSX.read(evt.target.result, {type:'binary'}).SheetNames[0]]);
+                init(data);
+            };
+            r.readAsBinaryString(f);
+        });
+
+        function init(data) {
+            raw = data; filtered = data; cols = Object.keys(data[0]);
+            document.getElementById('upload-screen').style.display='none';
+            document.getElementById('dashboard').style.display='flex';
+
+            const allSelects = document.querySelectorAll('select');
+            allSelects.forEach(s => {
+                if(s.id !== 'sVal') s.innerHTML = cols.map(c => `<option value="${c}">${c}</option>`).join('');
+            });
+
+            // Set different defaults for variety
+            if(cols.length > 1) {
+                for(let i=1; i<=5; i++) {
+                    document.getElementById(`c${i}Y`).selectedIndex = 1;
+                    if(document.getElementById(`k${i}`)) document.getElementById(`k${i}`).selectedIndex = (i % cols.length);
+                }
+            }
+
+            loadVals();
+        }
+
+        function loadVals() {
+            const c = document.getElementById('sCol').value;
+            const u = [...new Set(raw.map(r => r[c]))];
+            document.getElementById('sVal').innerHTML = `<option value="ALL">ALL_SYSTEMS</option>` + u.map(v => `<option value="${v}">${v}</option>`).join('');
+            runFilters();
+        }
+
+        function runFilters() {
+            const c = document.getElementById('sCol').value, v = document.getElementById('sVal').value;
+            filtered = (v === "ALL") ? raw : raw.filter(r => String(r[c]) === v);
+            upKPI(); drawAll();
+        }
+
+        function upKPI() {
+            for(let i=1; i<=6; i++) {
+                const el = document.getElementById(`k${i}`); if(!el) continue;
+                const c = el.value; const vals = filtered.map(r => r[c]);
+                const isN = vals.every(v => v == null || !isNaN(parseFloat(v)));
+                let res = isN ? vals.reduce((a,b)=>a+(parseFloat(b)||0), 0) : [...new Set(vals)].length;
+                document.getElementById(`v${i}`).innerText = res > 1000 ? (res/1000).toFixed(1)+'K' : res.toLocaleString();
+            }
+        }
+
+        function drawAll() { [1,2,3,4,5].forEach(i => drawOne(i)); }
+
+        function drawOne(i) {
+            const lx = document.getElementById(`c${i}X`).value;
+            const vy = document.getElementById(`c${i}Y`).value;
+            const types = ['bar', 'doughnut', 'line', 'bar', 'pie'];
+            const type = types[i-1];
+
+            document.getElementById(`h${i}`).innerText = `${vy} BY ${lx}`;
+
+            const agg = {};
+            filtered.forEach(r => {
+                const l = r[lx] || 'N/A', v = parseFloat(r[vy]) || 0;
+                agg[l] = (agg[l] || 0) + (isNaN(v) ? 1 : v);
+            });
+
+            const lbls = Object.keys(agg);
+            const data = lbls.map(l => agg[l]);
+            const colors = lbls.map((_, idx) => `hsl(${(idx * 360 / lbls.length)}, 70%, 50%)`);
+
+            if(cInst[i]) cInst[i].destroy();
+            cInst[i] = new Chart(document.getElementById(`chart${i}`), {
+                type: type,
+                data: { labels: lbls, datasets: [{ data: data, backgroundColor: colors, borderColor: '#00f2fe', borderWidth: 1 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: (type==='pie'||type==='doughnut'), position:'bottom', labels:{color:'#00f2fe', font:{size:7}} } },
+                    scales: {
+                        x: { display: (type==='bar'||type==='line'), ticks:{color:'#00f2fe', font:{size:8}, maxRotation:45} },
+                        y: { display: (type==='bar'||type==='line'), ticks:{color:'#00f2fe', font:{size:8}} }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
